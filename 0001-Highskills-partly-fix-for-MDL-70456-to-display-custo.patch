@@ -1,0 +1,124 @@
+From 10c7df42a81490548bc18000b51ea9c23b2c2869 Mon Sep 17 00:00:00 2001
+From: unknown <administrator@HSDC.HIGHSKILLS.CO.IL>
+Date: Thu, 15 Jul 2021 01:02:31 -0700
+Subject: [PATCH] Highskills - partly fix for MDL-70456 to display custom
+ profile fields declared in $CFG->showuseridentity for scorm reports only -
+ Michael Bulwick 15072021
+
+---
+ mod/scorm/report/basic/classes/report.php      | 18 +++++++++++++++++-
+ .../report/interactions/classes/report.php     | 18 +++++++++++++++++-
+ mod/scorm/report/objectives/classes/report.php | 18 +++++++++++++++++-
+ 3 files changed, 51 insertions(+), 3 deletions(-)
+
+diff --git a/mod/scorm/report/basic/classes/report.php b/mod/scorm/report/basic/classes/report.php
+index d315929da83..4d7410e221d 100644
+--- a/mod/scorm/report/basic/classes/report.php
++++ b/mod/scorm/report/basic/classes/report.php
+@@ -118,7 +118,12 @@ class report extends \mod_scorm\report {
+             $columns[] = 'fullname';
+             $headers[] = get_string('name');
+             // TODO Does not support custom user profile fields (MDL-70456).
+-            $extrafields = \core_user\fields::get_identity_fields($coursecontext, false);
++			
++			//HIGHSKILLS START - changed to display custom profile fields declared in $CFG->showuseridentity
++            //$extrafields = \core_user\fields::get_identity_fields($coursecontext, false);
++			$extrafields = \core_user\fields::get_identity_fields($coursecontext, true);
++			//HIGHSKILLS END 
++			
+             foreach ($extrafields as $field) {
+                 $columns[] = $field;
+                 $headers[] = \core_user\fields::get_display_name($field);
+@@ -272,6 +277,17 @@ class report extends \mod_scorm\report {
+             $userfields = \core_user\fields::for_identity($coursecontext, false)->with_userpic()->including('idnumber');
+             $selectfields = $userfields->get_sql('u', false, '', 'userid')->selects;
+             $select .= 'st.scormid AS scormid, st.attempt AS attempt ' . $selectfields . ' ';
++			
++			//HIGHSKILLS START - added custom profile fields to report 
++			$normalfields = \core_user\fields::get_identity_fields($coursecontext, false);
++			$customprofilefields = array_diff($extrafields, $normalfields);
++			$customfieldssql =' ';
++			foreach($customprofilefields AS $customfield){
++				$myfieldname = str_replace("profile_field_", "" ,$customfield);
++				$customfieldssql.=",(SELECT uid.data FROM {user_info_field} uif, {user_info_data} uid WHERE uif.shortname ='".$myfieldname."' AND uif.id = uid.fieldid AND uid.userid = u.id ) AS profile_field_".$myfieldname." ";
++			}
++			$select .= $customfieldssql;
++			//HIGHSKILLS END
+ 
+             // This part is the same for all cases - join users and scorm_scoes_track tables.
+             $from = 'FROM {user} u ';
+diff --git a/mod/scorm/report/interactions/classes/report.php b/mod/scorm/report/interactions/classes/report.php
+index 43fd42b5c1b..6c914c859d9 100644
+--- a/mod/scorm/report/interactions/classes/report.php
++++ b/mod/scorm/report/interactions/classes/report.php
+@@ -134,7 +134,12 @@ class report extends \mod_scorm\report {
+             $headers[] = get_string('name');
+ 
+             // TODO Does not support custom user profile fields (MDL-70456).
+-            $extrafields = \core_user\fields::get_identity_fields($coursecontext, false);
++            
++			//HIGHSKILLS START - changed to display custom profile fields declared in $CFG->showuseridentity
++            //$extrafields = \core_user\fields::get_identity_fields($coursecontext, false);
++			$extrafields = \core_user\fields::get_identity_fields($coursecontext, true);
++			//HIGHSKILLS END 
++			
+             foreach ($extrafields as $field) {
+                 $columns[] = $field;
+                 $headers[] = \core_user\fields::get_display_name($field);
+@@ -161,6 +166,17 @@ class report extends \mod_scorm\report {
+             $userfields = \core_user\fields::for_identity($coursecontext, false)->with_userpic()->including('idnumber');
+             $selectfields = $userfields->get_sql('u', false, '', 'userid')->selects;
+             $select .= 'st.scormid AS scormid, st.attempt AS attempt ' . $selectfields . ' ';
++			
++			//HIGHSKILLS START - added custom profile fields to report 
++			$normalfields = \core_user\fields::get_identity_fields($coursecontext, false);
++			$customprofilefields = array_diff($extrafields, $normalfields);
++			$customfieldssql =' ';
++			foreach($customprofilefields AS $customfield){
++				$myfieldname = str_replace("profile_field_", "" ,$customfield);
++				$customfieldssql.=",(SELECT uid.data FROM {user_info_field} uif, {user_info_data} uid WHERE uif.shortname ='".$myfieldname."' AND uif.id = uid.fieldid AND uid.userid = u.id ) AS profile_field_".$myfieldname." ";
++			}
++			$select .= $customfieldssql;
++			//HIGHSKILLS END
+ 
+             // This part is the same for all cases - join users and scorm_scoes_track tables.
+             $from = 'FROM {user} u ';
+diff --git a/mod/scorm/report/objectives/classes/report.php b/mod/scorm/report/objectives/classes/report.php
+index f901d951764..89672defb76 100644
+--- a/mod/scorm/report/objectives/classes/report.php
++++ b/mod/scorm/report/objectives/classes/report.php
+@@ -128,7 +128,12 @@ class report extends \mod_scorm\report {
+             $headers[] = get_string('name');
+ 
+             // TODO Does not support custom user profile fields (MDL-70456).
+-            $extrafields = \core_user\fields::get_identity_fields($coursecontext, false);
++            
++			//HIGHSKILLS START - changed to display custom profile fields declared in $CFG->showuseridentity
++            //$extrafields = \core_user\fields::get_identity_fields($coursecontext, false);
++			$extrafields = \core_user\fields::get_identity_fields($coursecontext, true);
++			//HIGHSKILLS END 
++			
+             foreach ($extrafields as $field) {
+                 $columns[] = $field;
+                 $headers[] = \core_user\fields::get_display_name($field);
+@@ -155,6 +160,17 @@ class report extends \mod_scorm\report {
+             $userfields = \core_user\fields::for_identity($coursecontext, false)->with_userpic()->including('idnumber');
+             $selectfields = $userfields->get_sql('u', false, '', 'userid')->selects;
+             $select .= 'st.scormid AS scormid, st.attempt AS attempt ' . $selectfields . ' ';
++			
++			//HIGHSKILLS START - added custom profile fields to report 
++			$normalfields = \core_user\fields::get_identity_fields($coursecontext, false);
++			$customprofilefields = array_diff($extrafields, $normalfields);
++			$customfieldssql =' ';
++			foreach($customprofilefields AS $customfield){
++				$myfieldname = str_replace("profile_field_", "" ,$customfield);
++				$customfieldssql.=",(SELECT uid.data FROM {user_info_field} uif, {user_info_data} uid WHERE uif.shortname ='".$myfieldname."' AND uif.id = uid.fieldid AND uid.userid = u.id ) AS profile_field_".$myfieldname." ";
++			}
++			$select .= $customfieldssql;
++			//HIGHSKILLS END
+ 
+             // This part is the same for all cases - join users and scorm_scoes_track tables.
+             $from = 'FROM {user} u ';
+-- 
+2.32.0.windows.2
+
